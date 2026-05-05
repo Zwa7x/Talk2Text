@@ -2,3 +2,6 @@ torch
 torchaudio
 whisperx
 streamlit
+soundfile
+librosa
+numpy
