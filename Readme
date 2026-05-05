@@ -1,0 +1,13 @@
+Fonctionnalités :
+
+Upload audio
+
+Option : couper l’audio
+
+slider Streamlit pour choisir début/fin
+
+Lancer la diarisation
+
+Afficher les segments
+
+Télécharger les résultats (JSON, CSV)
