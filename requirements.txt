@@ -1,10 +1,9 @@
 streamlit==1.26.0
-# Décommenter si tu veux installer torch et whisperx sur la plateforme
-# torch==2.2.0
-# torchaudio==2.2.0
-# whisperx==0.3.0
-
-# Alternatives légères
-whisper==20230314
 numpy
 soundfile
+# torch, torchaudio, whisperx et whisper sont volontairement commentés pour permettre le démarrage rapide.
+# Si tu veux activer la transcription côté serveur, décommente et assure-toi d'utiliser un environnement compatible.
+# torch==2.2.0
+# torchaudio==2.2.0
+# whisper==1.1.10
+# whisperx==0.3.0
