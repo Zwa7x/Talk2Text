@@ -1,75 +1,65 @@
 # app.py
 import streamlit as st
-import time
 import logging
+import time
 
 st.set_page_config(page_title="Talk2Text", layout="centered")
 st.title("Talk2Text")
 
-# Affichage immédiat pour debug démarrage
-st.write("Démarrage de l'application...")
-
-# Logger simple pour voir les étapes dans les logs
 logger = logging.getLogger("talk2text")
 logger.setLevel(logging.INFO)
 
-# Indiquer l'état de l'environnement avant imports lourds
-st.write("Vérification des imports légers OK")
+st.write("Démarrage de l'application… (interface prête même si les modèles ne sont pas installés)")
 
-# Fonction pour charger les dépendances lourdes et le modèle
+# Indiquer si les dépendances lourdes sont présentes
+def check_optional_packages():
+    info = {"torch": False, "torchaudio": False, "whisper": False, "whisperx": False}
+    try:
+        import importlib
+        for pkg in list(info.keys()):
+            try:
+                importlib.import_module(pkg)
+                info[pkg] = True
+            except Exception:
+                info[pkg] = False
+    except Exception:
+        pass
+    return info
+
+pkg_info = check_optional_packages()
+st.write("Dépendances détectées :", pkg_info)
+
+# Chargement lazy du modèle (si disponible)
 @st.cache_resource
-def load_model(model_name: str = "small"):
-    logger.info("Début du chargement du modèle")
-    st.write("Chargement du modèle audio, cela peut prendre quelques secondes...")
-    # Importer ici pour éviter le blocage au démarrage
+def load_model_safe(model_name: str = "small"):
     try:
-        import torch
-        import torchaudio
         import whisperx
-    except Exception as e:
-        logger.exception("Erreur lors de l'import des dépendances lourdes")
-        raise
-
-    # Exemple d'appel à whisperx, adapter selon ton usage réel
-    try:
         model = whisperx.load_model(model_name)
+        return model
     except Exception as e:
-        logger.exception("Erreur lors du chargement du modèle whisperx")
-        raise
-    logger.info("Modèle chargé")
-    return model
+        raise RuntimeError(f"Impossible de charger whisperx: {e}")
 
-# Interface utilisateur minimale
 st.sidebar.header("Paramètres")
-model_choice = st.sidebar.selectbox("Choisir le modèle", ["tiny", "small", "medium"], index=1)
-use_lazy = st.sidebar.checkbox("Charger le modèle à la demande", value=True)
+model_choice = st.sidebar.selectbox("Choisir le modèle (si installé)", ["tiny", "small", "medium"], index=1)
 
-st.write("Prêt. Choisissez une action.")
+st.write("L'application est prête. Si les paquets lourds ne sont pas installés, la transcription ne fonctionnera pas ici.")
 
-if st.button("Tester démarrage rapide"):
-    st.write("L'application répond correctement.")
+if st.button("Tester l'interface"):
+    st.success("Interface OK — l'app répond.")
 
-# Bouton pour charger et tester le modèle
-if st.button("Charger le modèle maintenant"):
-    with st.spinner("Chargement en cours..."):
-        try:
-            model = load_model(model_choice)
-            st.success("Modèle chargé avec succès")
-        except Exception as e:
-            st.error(f"Échec du chargement du modèle: {e}")
-            st.write("Consulte les logs pour plus de détails")
-
-# Exemple de zone pour uploader un fichier audio et lancer la transcription
 uploaded_file = st.file_uploader("Dépose un fichier audio pour transcrire", type=["wav","mp3","m4a"])
 if uploaded_file is not None:
     st.write("Fichier reçu:", uploaded_file.name)
     if st.button("Transcrire le fichier"):
-        with st.spinner("Transcription en cours..."):
-            try:
-                model = load_model(model_choice)
-                # Remplace la ligne suivante par ton pipeline whisperx réel
-                st.write("Ici tu appellerais la fonction de transcription avec le modèle chargé")
-                time.sleep(1)
-                st.success("Transcription terminée (exemple)")
-            except Exception as e:
-                st.error(f"Erreur pendant la transcription: {e}")
+        if not pkg_info.get("whisperx", False):
+            st.error("Le paquet whisperx (ou ses dépendances) n'est pas installé sur ce serveur.")
+            st.info("Options : 1) Déployer sur un environnement compatible avec torch/whisperx 2) Utiliser une API distante pour la transcription 3) Installer les paquets et redéployer.")
+        else:
+            with st.spinner("Chargement du modèle et transcription..."):
+                try:
+                    model = load_model_safe(model_choice)
+                    # Ici, place ton pipeline de transcription réel
+                    time.sleep(1)
+                    st.success("Transcription terminée (exemple).")
+                except Exception as e:
+                    st.error(f"Erreur pendant la transcription: {e}")
