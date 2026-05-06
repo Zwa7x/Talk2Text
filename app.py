@@ -1,55 +1,75 @@
+# app.py
 import streamlit as st
-from utils.audio_tools import load_audio, trim_audio, save_temp_wav
-from utils.diarization import load_models, run_diarization
+import time
+import logging
 
+st.set_page_config(page_title="Talk2Text", layout="centered")
+st.title("Talk2Text")
 
-st.set_page_config(page_title="Talk2Text – Diarisation", layout="centered")
-st.title("🗣️ Talk2Text – Diarisation Audio")
-st.write("Upload un fichier audio, coupe-le si besoin, puis lance la diarisation.")
+# Affichage immédiat pour debug démarrage
+st.write("Démarrage de l'application...")
 
+# Logger simple pour voir les étapes dans les logs
+logger = logging.getLogger("talk2text")
+logger.setLevel(logging.INFO)
 
-# Upload
-audio_file = st.file_uploader("Choisir un fichier audio", type=["wav", "mp3", "m4a", "flac"])
+# Indiquer l'état de l'environnement avant imports lourds
+st.write("Vérification des imports légers OK")
 
-if audio_file:
-    waveform, sr = load_audio(audio_file)
-    duration = waveform.shape[1] / sr
+# Fonction pour charger les dépendances lourdes et le modèle
+@st.cache_resource
+def load_model(model_name: str = "small"):
+    logger.info("Début du chargement du modèle")
+    st.write("Chargement du modèle audio, cela peut prendre quelques secondes...")
+    # Importer ici pour éviter le blocage au démarrage
+    try:
+        import torch
+        import torchaudio
+        import whisperx
+    except Exception as e:
+        logger.exception("Erreur lors de l'import des dépendances lourdes")
+        raise
 
-    st.audio(audio_file)
-    st.write(f"Durée : **{duration:.1f} sec**")
+    # Exemple d'appel à whisperx, adapter selon ton usage réel
+    try:
+        model = whisperx.load_model(model_name)
+    except Exception as e:
+        logger.exception("Erreur lors du chargement du modèle whisperx")
+        raise
+    logger.info("Modèle chargé")
+    return model
 
-    # Découpe optionnelle
-    st.subheader("✂️ Découper l'audio (optionnel)")
-    start_sec, end_sec = st.slider(
-        "Plage à analyser",
-        0.0, float(duration),
-        (0.0, float(duration)),
-        step=0.1
-    )
+# Interface utilisateur minimale
+st.sidebar.header("Paramètres")
+model_choice = st.sidebar.selectbox("Choisir le modèle", ["tiny", "small", "medium"], index=1)
+use_lazy = st.sidebar.checkbox("Charger le modèle à la demande", value=True)
 
-    trimmed = trim_audio(waveform, sr, start_sec, end_sec)
-    trimmed_duration = trimmed.shape[1] / sr
-    st.write(f"Durée après découpe : **{trimmed_duration:.1f} sec**")
+st.write("Prêt. Choisissez une action.")
 
-    if st.button("🚀 Lancer la diarisation"):
-        with st.spinner("Chargement des modèles…"):
-            model, diarize_model = load_models()
+if st.button("Tester démarrage rapide"):
+    st.write("L'application répond correctement.")
 
-        with st.spinner("Analyse en cours…"):
-            temp_path = save_temp_wav(trimmed, sr)
-            result = run_diarization(model, diarize_model, temp_path)
+# Bouton pour charger et tester le modèle
+if st.button("Charger le modèle maintenant"):
+    with st.spinner("Chargement en cours..."):
+        try:
+            model = load_model(model_choice)
+            st.success("Modèle chargé avec succès")
+        except Exception as e:
+            st.error(f"Échec du chargement du modèle: {e}")
+            st.write("Consulte les logs pour plus de détails")
 
-        st.success("Diarisation terminée !")
-
-        # Affichage
-        st.subheader("📋 Résultats")
-        st.json(result)
-
-        # Export JSON
-        import json
-        st.download_button(
-            "📥 Télécharger le JSON",
-            data=json.dumps(result, indent=2, ensure_ascii=False),
-            file_name="diarisation.json",
-            mime="application/json"
-        )
+# Exemple de zone pour uploader un fichier audio et lancer la transcription
+uploaded_file = st.file_uploader("Dépose un fichier audio pour transcrire", type=["wav","mp3","m4a"])
+if uploaded_file is not None:
+    st.write("Fichier reçu:", uploaded_file.name)
+    if st.button("Transcrire le fichier"):
+        with st.spinner("Transcription en cours..."):
+            try:
+                model = load_model(model_choice)
+                # Remplace la ligne suivante par ton pipeline whisperx réel
+                st.write("Ici tu appellerais la fonction de transcription avec le modèle chargé")
+                time.sleep(1)
+                st.success("Transcription terminée (exemple)")
+            except Exception as e:
+                st.error(f"Erreur pendant la transcription: {e}")
