@@ -1,7 +1,10 @@
-torch
-torchaudio
-whisperx
-streamlit
-soundfile
-librosa
+streamlit==1.26.0
+# Décommenter si tu veux installer torch et whisperx sur la plateforme
+# torch==2.2.0
+# torchaudio==2.2.0
+# whisperx==0.3.0
+
+# Alternatives légères
+whisper==20230314
 numpy
+soundfile
